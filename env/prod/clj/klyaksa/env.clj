@@ -1,0 +1,11 @@
+(ns klyaksa.env
+  (:require [clojure.tools.logging :as log]))
+
+(def defaults
+  {:init
+   (fn []
+     (log/info "\n-=[klyaksa started successfully]=-"))
+   :stop
+   (fn []
+     (log/info "\n-=[klyaksa has shut down successfully]=-"))
+   :middleware identity})
