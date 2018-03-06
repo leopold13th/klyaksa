@@ -16,14 +16,14 @@
    [:a.nav-link {:href uri} title]])
 
 (defn navbar []
-  [:nav.navbar.navbar-dark.bg-primary.navbar-expand-md
-   {:role "navigation"}
+  [:nav.navbar.navbar-light.navbar-expand-md
+   {:role "navigation" :style {:background-color "#d8e3d8"}}
    [:button.navbar-toggler.hidden-sm-up
     {:type "button"
      :data-toggle "collapse"
      :data-target "#collapsing-navbar"}
     [:span.navbar-toggler-icon]]
-   [:a.navbar-brand {:href "#/"} "klyaksa"]
+   [:a.navbar-brand {:href "#/"} [:img {:src (str js/context "/img/klyaksa.png") :width "45" :height "45"}] " Klяksa!"]
    [:div#collapsing-navbar.collapse.navbar-collapse
     [:ul.nav.navbar-nav.mr-auto
      [nav-link "#/" "Users" :home]
@@ -42,7 +42,8 @@
   (let [x (find-in-arr id)]
     (session/put! :users (update-in (session/get :users) [x :active] #(if (= % 0) 1 0)))))
 
-(defn update-delete-user [id] (fetch-docs!))
+(defn update-delete-user [id]
+  (session/put! :users (filter #(not= (:id %) id) (session/get :users))))
 
 (defn change-password [id]
   (POST "/pw" {:handler #(js/alert (str "New password " (:result %)))
@@ -50,12 +51,14 @@
                :params {:id id, :pw (js/prompt "New pw")}
                :response-format :json
                :keywords? true}))
+
 (defn enable-disable-user [id status]
   (POST "/status" {:handler #(if (= (:result %) 1) (update-active-user id) (js/alert "Error occurred while saving to DB"))
                    :error-handler #(js/alert "Error.")
                    :params {:id id, :status (if status 0 1)}
                    :response-format :json
                    :keywords? true}))
+
 (defn create-user []
   (let [email (js/prompt "Enter email" "@ks-bank.ru")
         c (count email)]
@@ -69,7 +72,10 @@
 
 (defn delete-user [id]
   (if (js/confirm "Do you really want to delete mail address?")
-    (POST "/delete" {:handler #(if (= (:result %) 1) (update-delete-user id) (js/alert "Error occurred while deleting from DB"))
+    (POST "/delete" {:handler (fn [r]
+                                (if (= (:result r) 1)
+                                  (update-delete-user id)
+                                  (js/alert "Error occurred while deleting from DB")))
                      :error-handler #(js/alert "Error.")
                      :params {:id id}
                      :response-format :json
@@ -154,10 +160,72 @@
     [:div.col-md-12
      [:img {:src (str js/context "/img/warning_clojure.png")}]]]])
 
+;(def pass "trez")
+(def pass "trez18kha")
+
+(defn redirect! [loc]
+  (set! (.-location js/window) loc))
+
+; (defn set-hash! [loc]
+;   (set! (.-hash js/window.location) loc))
+
+(defn change-route [url]
+  (if (= (session/get :password) pass)
+    (session/put! :page url)
+    (redirect! "/#/login")))    ;(session/put! :page :login)
+
+(defn check-password []
+  (if (= (session/get :password) pass)
+    (do
+      (.remove (.-classList (.getElementById js/document "body")) "bg")
+      (change-route :home))
+    (session/put! :error true)))
+
+(defn login-page2 []
+  (.add (.-classList (.getElementById js/document "body")) "bg")
+  [:div.container
+    (if (= (session/get :error) true)
+      [:div.justify-content-md-center
+          [:div.alert.alert-danger {:role "alert"}
+            [:img {:src (str js/context "/img/oops.png")}]
+            [:label.col-form-label [:strong " Неверный пароль! Давай еще раз."]]
+            [:button.btn.btn-success {:on-click #(session/put! :error false)} "Понял"]]])
+    [:div.row.justify-content-md-center
+      [:h4 "А какой у тебя пароль, a?"]]
+    [:div.row.justify-content-md-center  ;.jumbotron
+      [:label.col-form-label "Password:"]
+      [:div.col-3
+        [:input.form-control {:name "myPass"
+               :type "password"
+               :on-change #(do (session/put! :error false) (session/put! :password (-> % .-target .-value)))}]]
+      [:button.btn.btn-success {:on-click #(check-password)} "Go!"]]])
+
+(defn login-page []
+  (.add (.-classList (.getElementById js/document "body")) "bg")
+  [:div.container
+    (if (= (session/get :error) true)
+      [:div.justify-content-md-center
+          [:div.alert.alert-danger {:role "alert"}
+            [:img {:src (str js/context "/img/oops.png")}]
+            [:label.col-form-label [:strong " Неверный пароль! Давай еще раз."]]
+            ;[:button.btn.btn-success {:on-click #(session/put! :error false)} "Понял"]
+            ]])
+    [:div.row.justify-content-md-center
+      [:h4 "А какой у тебя пароль, a?"]]
+    [:div.row.justify-content-md-center.middle  ;.jumbotron
+      [:label.col-form-label "Password:"]
+      [:div.col-3
+        [:input.form-control {:name "myPass"
+               :type "password"
+               :on-focus #(session/put! :error false)
+               :on-change #(do (session/put! :error false) (session/put! :password (-> % .-target .-value)))}]]
+      [:button.btn.btn-success {:on-click #(check-password)} "Go!"]]])
+
 (def pages
   {:home #'home-page
    :aliases #'aliases-page
-   :about #'about-page})
+   :about #'about-page
+   :login #'login-page})
 
 (defn page []
   [(pages (session/get :page))])
@@ -167,13 +235,16 @@
 (secretary/set-config! :prefix "#")
 
 (secretary/defroute "/" []
-  (session/put! :page :home))
+  (change-route :home))
 
 (secretary/defroute "/aliases" []
-  (session/put! :page :aliases))
+  (change-route :aliases))
 
 (secretary/defroute "/about" []
   (session/put! :page :about))
+
+(secretary/defroute "/login" []
+  (session/put! :page :login))
 
 ;; -------------------------
 ;; History
@@ -194,7 +265,6 @@
      :response-format :json
      :keywords? true})
   (GET "/aliases"
-    ; {:handler #(js/console.log (str %))
     {:handler #(session/put! :aliases %)
      :response-format :json
      :keywords? true}))
@@ -203,16 +273,6 @@
   (r/render [#'navbar] (.getElementById js/document "navbar"))
   (r/render [#'page] (.getElementById js/document "app")))
 
-(defn login-page []
-  [:div.container
-   [:br]
-   [:div.row>div.col-sm-8
-    [:label "Password:"]
-    [:input {:name "myPass"
-             :type "password"
-             :on-change #(if (= (-> % .-target .-value) "trez")
-                           (mount-components))}]]])
-
 (defn init! []
   (load-interceptors!)
   (session/put! :filter "@")
@@ -220,5 +280,5 @@
   (session/put! :dst "@ks-bank.ru")
   (fetch-docs!)
   (hook-browser-navigation!)
-  (r/render (login-page) (.getElementById js/document "app")))
-
+  (mount-components)
+  (change-route :login))

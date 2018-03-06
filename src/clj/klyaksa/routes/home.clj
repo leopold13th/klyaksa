@@ -12,8 +12,6 @@
       :subname "//127.0.0.1:3306/mail?serverTimezone=UTC&useSSL=false"
       :user "mailuser"
       :password "zaxoh9eeku7K"})
-;      :user "root"
-;      :password "555"})
 
 (defn home-page []
   (layout/render "home.html"))
