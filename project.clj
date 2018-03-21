@@ -1,3 +1,7 @@
+(require 'cemerick.pomegranate.aether)
+    (cemerick.pomegranate.aether/register-wagon-factory!
+     "http" #(org.apache.maven.wagon.providers.http.HttpWagon.))
+     
 (defproject klyaksa "0.1.0-SNAPSHOT"
 
   :description "FIXME: write description"
@@ -33,7 +37,11 @@
                  [selmer "1.11.6"]
                  [mysql/mysql-connector-java "6.0.5"]
                  [org.clojure/java.jdbc "0.7.5"]]
-
+  :deploy-repositories [["releases" {:url "http://localhost:8081/repository/maven-releases/"
+                                     :username :env :password :env }]
+                        ["snapshots" {:url "http://localhost:8081/repository/maven-snapshots/"
+                                      :username :env :password :env}]]
+                                      
   :min-lein-version "2.0.0"
   
   :source-paths ["src/clj" "src/cljc"]

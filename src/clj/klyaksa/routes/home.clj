@@ -34,7 +34,7 @@
     (-> (response/ok (aliases-all))
         (response/header "Content-Type" "application/json; charset=utf-8")))
   (POST "/pw" [id pw]
-    (let [hash (:out (sh "dovecot" "pw" "-s" "SHA256-CRYPT" "-p" pw))
+    (let [hash (clojure.string/trim-newline (:out (sh "dovecot" "pw" "-s" "SHA256-CRYPT" "-p" pw)))
           res (first (sql/update! mysql-db :virtual_users {:password hash} ["id = ?" id]))]
       (-> (response/ok {:result 1})
           (response/header "Content-Type" "application/json; charset=utf-8"))))
